@@ -8,6 +8,7 @@ import torch
 import cv2
 import pandas
 import sklearn
+from torch import nn
 
 ###############################################################################
 # MAIN
