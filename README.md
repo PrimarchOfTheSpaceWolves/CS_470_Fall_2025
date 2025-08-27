@@ -89,6 +89,8 @@ The latest instructions for installing PyTorch may be found [here](https://pytor
 #### CUDA-Enabled PyTorch
 If you have an NVIDIA graphics card (or intend to run this environment on a machine with one), you will want to install the CUDA-enabled version of PyTorch.
 
+If necessary, change the version of CUDA appropriately.
+
 ##### Windows (CUDA 12.6)
 
 ```
