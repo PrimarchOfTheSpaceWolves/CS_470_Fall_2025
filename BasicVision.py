@@ -65,8 +65,13 @@ def main():
             # Get next frame from camera
             _, image = camera.read()
             
+            grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            grayscale = np.where(grayscale <= 100, 100, grayscale)
+            grayscale = np.where(grayscale >= 150, 150, grayscale)
+                                   
             # Show the image
             cv2.imshow(windowName, image)
+            cv2.imshow("Processed", grayscale)
 
             # Wait 30 milliseconds, and grab any key presses
             key = cv2.waitKey(30)
