@@ -14,11 +14,13 @@ from torch import nn
 # MAIN
 ###############################################################################
 
-def main():        
+def main():   
+    print("BEGINNING EXERCISE...")
+         
     ###############################################################################
     # PYTORCH
     ###############################################################################
-    print("HELLO")
+    
     b = torch.rand(5,3)
     print(b)
     print("Do you have Torch CUDA?:", torch.cuda.is_available())
@@ -100,6 +102,8 @@ def main():
 
         # Cleanup this window
         cv2.destroyAllWindows()
+        
+    print("PROGRAM COMPLETE.")
 
 # The main function
 if __name__ == "__main__": 
