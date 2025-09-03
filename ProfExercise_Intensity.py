@@ -9,6 +9,23 @@ import cv2
 import pandas
 import sklearn
 from torch import nn
+from enum import Enum
+
+class IntTransform(Enum):
+    ORIGINAL = 0
+    NEGATIVE = 1
+    HISTEQUAL = 2
+
+def transform(image, chosenT):
+    
+    if chosenT == IntTransform.ORIGINAL:    
+        output = np.copy(image)
+    elif chosenT == IntTransform.NEGATIVE:
+        output = 255 - image
+    elif chosenT == IntTransform.HISTEQUAL:
+        output = cv2.equalizeHist(image)
+    
+    return output
 
 ###############################################################################
 # MAIN
@@ -38,6 +55,10 @@ def main():
     counter = 0
     MAX_COUNTER = 30
     lastImage = None
+    
+    for item in list(IntTransform):
+        print("*", item.name, "=", item.value)
+    chosenT = IntTransform(int(input("Enter choice: ")))
         
     ###############################################################################
     # OPENCV
@@ -62,37 +83,20 @@ def main():
         # Create window ahead of time
         windowName = "Webcam"
         cv2.namedWindow(windowName)
-
+        
         # While not closed...
         key = -1
         while key == -1:
             # Get next frame from camera
             _, image = camera.read()
+                        
+            grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            out_image = transform(grayscale, chosenT)
             
-            sf = 100.0
-            small_image = cv2.resize(image, dsize=None, fx=1.0/sf, fy=1.0/sf)
-            large_image = cv2.resize(small_image, dsize=None, fx=sf, fy=sf,
-                                     interpolation=cv2.INTER_NEAREST)
-            
-            
-            #grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            #grayscale = np.where(grayscale <= 100, 100, grayscale)
-            #grayscale = np.where(grayscale >= 150, 150, grayscale)
-                                   
             # Show the image
-            cv2.imshow(windowName, image)
-            #cv2.imshow("MY EYES", large_image)
-            #cv2.imshow("Processed", grayscale)
-            '''
-            counter += 1
-            if lastImage is None or counter >= MAX_COUNTER:
-                counter = 0
-                lastImage = np.copy(image).astype("float32")
+            cv2.imshow(windowName, grayscale)
+            cv2.imshow("Output", out_image)
             
-            output = cv2.convertScaleAbs(image.astype("float32")*0.5 + lastImage*0.5)
-                    
-            cv2.imshow("GHOST", output)
-            '''
             
             # Wait 30 milliseconds, and grab any key presses
             key = cv2.waitKey(30)
