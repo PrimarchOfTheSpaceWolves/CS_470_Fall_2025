@@ -111,6 +111,9 @@ def main():
                         
             grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             
+            #grayscale = cv2.equalizeHist(grayscale)
+            
+            
             grayscale = np.expand_dims(grayscale, axis=-1)
             desired_output = data_transform(grayscale)
             desired_output = torch.unsqueeze(desired_output, 0)
@@ -141,7 +144,7 @@ def main():
             cv2.imshow("Output", out_image)
             
             print("Weights:", conv_layer.weight.detach().cpu().numpy())
-            
+            print("Loss:", loss.detach().cpu().numpy())
             
             # Wait 30 milliseconds, and grab any key presses
             key = cv2.waitKey(30)
