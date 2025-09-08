@@ -10,6 +10,8 @@ import pandas
 import sklearn
 from torch import nn
 from enum import Enum
+from torch import nn 
+from torchvision.transforms import v2
 
 class IntTransform(Enum):
     ORIGINAL = 0
@@ -56,9 +58,26 @@ def main():
     MAX_COUNTER = 30
     lastImage = None
     
-    for item in list(IntTransform):
-        print("*", item.name, "=", item.value)
-    chosenT = IntTransform(int(input("Enter choice: ")))
+    chosen_T = 0
+    #for item in list(IntTransform):
+    #    print("*", item.name, "=", item.value)
+    #chosenT = IntTransform(int(input("Enter choice: ")))
+    
+    conv_layer = nn.Conv2d(in_channels=3, out_channels=1,
+                           kernel_size=1, bias=False)
+    model = nn.Sequential(conv_layer)
+    print(model)
+    
+    device = "cuda" # "mps" # "cpu"
+    model = model.to(device)
+    
+    loss_fn = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    
+    data_transform = v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True)
+    ])    
         
     ###############################################################################
     # OPENCV
@@ -91,11 +110,37 @@ def main():
             _, image = camera.read()
                         
             grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            out_image = transform(grayscale, chosenT)
             
+            grayscale = np.expand_dims(grayscale, axis=-1)
+            desired_output = data_transform(grayscale)
+            desired_output = torch.unsqueeze(desired_output, 0)
+            #print(desired_output.shape)
+            
+            color = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            data_input = data_transform(color)
+            data_input = torch.unsqueeze(data_input, 0)
+            
+            model.train()
+            data_input = data_input.to(device)
+            desired_output = desired_output.to(device)
+            
+            pred_output = model(data_input)
+            
+            loss = loss_fn(pred_output, desired_output)
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            
+            out_image = pred_output.detach().cpu().numpy()
+            out_image = out_image[0]
+            out_image = np.transpose(out_image, [1,2,0])
+            out_image = cv2.cvtColor(out_image, cv2.COLOR_RGB2BGR)
+                                
             # Show the image
             cv2.imshow(windowName, grayscale)
             cv2.imshow("Output", out_image)
+            
+            print("Weights:", conv_layer.weight.detach().cpu().numpy())
             
             
             # Wait 30 milliseconds, and grab any key presses
