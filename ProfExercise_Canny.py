@@ -74,10 +74,23 @@ def main():
             _, image = camera.read()
             grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             canny = cv2.Canny(grayscale, lowT, highT)
+            
+            line_seg = cv2.HoughLinesP(canny, 1.0, np.pi/180.0, 100, 
+                                       minLineLength=10.0,
+                                       maxLineGap=10.0)
+            
+            edge_color = cv2.cvtColor(canny, cv2.COLOR_GRAY2BGR)
+            
+            for line in line_seg:
+                cv2.line(edge_color, 
+                         (line[0][0], line[0][1]),
+                         (line[0][2], line[0][3]),
+                         (0,0,255), 3)
                
             # Show the image
             cv2.imshow(windowName, grayscale)
             cv2.imshow("CANNY", canny)
+            cv2.imshow("HOUGH", edge_color)
                         
             # Wait 30 milliseconds, and grab any key presses
             key = cv2.waitKey(30)
