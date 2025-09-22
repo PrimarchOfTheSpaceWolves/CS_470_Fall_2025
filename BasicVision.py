@@ -68,31 +68,9 @@ def main():
         while key == -1:
             # Get next frame from camera
             _, image = camera.read()
-            
-            sf = 100.0
-            small_image = cv2.resize(image, dsize=None, fx=1.0/sf, fy=1.0/sf)
-            large_image = cv2.resize(small_image, dsize=None, fx=sf, fy=sf,
-                                     interpolation=cv2.INTER_NEAREST)
-            
-            
-            #grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            #grayscale = np.where(grayscale <= 100, 100, grayscale)
-            #grayscale = np.where(grayscale >= 150, 150, grayscale)
-                                   
+
             # Show the image
             cv2.imshow(windowName, image)
-            #cv2.imshow("MY EYES", large_image)
-            #cv2.imshow("Processed", grayscale)
-            '''
-            counter += 1
-            if lastImage is None or counter >= MAX_COUNTER:
-                counter = 0
-                lastImage = np.copy(image).astype("float32")
-            
-            output = cv2.convertScaleAbs(image.astype("float32")*0.5 + lastImage*0.5)
-                    
-            cv2.imshow("GHOST", output)
-            '''
             
             # Wait 30 milliseconds, and grab any key presses
             key = cv2.waitKey(30)
