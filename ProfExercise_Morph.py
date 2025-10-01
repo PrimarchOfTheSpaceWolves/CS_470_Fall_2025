@@ -16,30 +16,54 @@ class MorphType(Enum):
     DILATE = 1
     OPEN = 2
     CLOSE = 3
+    GRADIENT = 4
+    TOP_HAT = 5
+    BOTTOM_HAT = 6
     
 def do_morph(image, morph_type, iterations):
     grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, thresh_image = cv2.threshold(grayscale, 0, 255,
                                     cv2.THRESH_OTSU)
-    # output = np.copy(thresh_image)
-    struct_size = 3 #11 #3
+    #input_image = thresh_image
+    input_image = grayscale
+    
+
+    struct_size = 11 #3
     element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
                                         (struct_size,struct_size))
     
     if morph_type == MorphType.ERODE:
-        output = cv2.erode(thresh_image, element, iterations=iterations)
+        output = cv2.erode(input_image, element, iterations=iterations)
     elif morph_type == MorphType.DILATE:
-        output = cv2.dilate(thresh_image, element, iterations=iterations)
+        output = cv2.dilate(input_image, element, iterations=iterations)
     elif morph_type == MorphType.OPEN:
-        output = cv2.morphologyEx(thresh_image, 
+        output = cv2.morphologyEx(input_image, 
                                   cv2.MORPH_OPEN,
                                   element,
                                   iterations=iterations)
     elif morph_type == MorphType.CLOSE:
-        output = cv2.morphologyEx(thresh_image, 
+        output = cv2.morphologyEx(input_image, 
                                   cv2.MORPH_CLOSE,
                                   element,
                                   iterations=iterations)
+    elif morph_type == MorphType.GRADIENT:
+        erode_image = cv2.erode(input_image, element, iterations=iterations)    
+        dilate_image = cv2.dilate(input_image, element, iterations=iterations)
+        output = dilate_image - erode_image
+    elif morph_type == MorphType.TOP_HAT:
+        morph_out = cv2.morphologyEx(input_image, 
+                                  cv2.MORPH_OPEN,
+                                  element,
+                                  iterations=iterations)
+        output = grayscale - morph_out
+    elif morph_type == MorphType.BOTTOM_HAT:
+        morph_out = cv2.morphologyEx(input_image, 
+                                  cv2.MORPH_CLOSE,
+                                  element,
+                                  iterations=iterations)
+        output = morph_out - grayscale
+        
+    #output = output - grayscale
         
     return output    
 
@@ -71,6 +95,12 @@ def main():
     counter = 0
     MAX_COUNTER = 30
     lastImage = None
+    
+    chosen_M = 0
+    for item in list(MorphType):
+        print("*", item.name, "=", item.value)
+    chosen_M = MorphType(int(input("Enter choice: ")))
+    chosen_iter = int(input("Enter iterations: "))
         
     ###############################################################################
     # OPENCV
@@ -105,8 +135,8 @@ def main():
             _, image = camera.read()
             
             output = do_morph(image, 
-                              morph_type=MorphType.CLOSE,
-                              iterations=iterations)
+                              morph_type=chosen_M,
+                              iterations=chosen_iter)
             
 
             # Show the image
