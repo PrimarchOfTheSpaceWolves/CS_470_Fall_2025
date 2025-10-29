@@ -5,6 +5,8 @@ import sklearn
 from torchvision import datasets
 import time
 
+from sklearn.svm import SVC
+from sklearn.ensemble import AdaBoostClassifier
 from sklearn.neighbors import (KNeighborsClassifier, NearestCentroid)
 from sklearn.metrics import (accuracy_score, f1_score, 
                              roc_auc_score, confusion_matrix, 
@@ -66,7 +68,9 @@ def main():
     #                                  weights="uniform", 
     #                                  algorithm="auto",
     #                                  n_jobs=None)
-    classifier = NearestCentroid()
+    #classifier = NearestCentroid()
+    #classifier = AdaBoostClassifier(n_estimators=100, random_state=0)
+    classifier = SVC(kernel="linear")
     classifier.fit(x_train, y_train)
     end_time = time.time()
     print("Training done:", (end_time-start_time), "seconds")
