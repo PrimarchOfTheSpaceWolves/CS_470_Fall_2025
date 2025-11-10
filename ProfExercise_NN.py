@@ -9,6 +9,7 @@ from torchvision.transforms import v2
 import numpy as np
 import os
 from sklearn.model_selection import train_test_split
+from prettytable import PrettyTable
 
 class DogCatDataset(Dataset):
     def __init__(self, root, train, transform, seed=42):
@@ -59,33 +60,82 @@ class DogCatDataset(Dataset):
         
         return (image, label)        
     
+class SimpleNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.flatten = nn.Flatten()
+        self.layer_stack = nn.Sequential(
+            nn.Linear(3072, 32),
+            nn.ReLU(),
+            nn.Linear(32, 10)
+        )              
+    
+    def forward(self, x):
+        x = self.flatten(x)
+        logits = self.layer_stack(x)
+        return logits
+    
+
+def count_parameters(model):
+    table = PrettyTable(["Modules", "Parameters"])
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        params = parameter.numel()
+        table.add_row([name, params])
+        total_params += params
+    print(table)
+    print(f"Total Trainable Params: {total_params}")
+    return total_params
+
 
 def main():
     
-    data_transform = v2.Compose([
+    device = "cuda"
+    
+    model = SimpleNetwork().to(device)
+    print(model)
+    count_parameters(model)
+    
+    base_data_transform = v2.Compose([
         v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
-        v2.Resize(size=(320,320))
+        #v2.Resize(size=(320,320))
     ])
     
-    train_ds = DogCatDataset(root="./data/PetImages", 
-                                 train=True, 
-                                 transform=data_transform)
+    data_aug_transform = v2.Compose([
+        base_data_transform,
+        v2.RandomHorizontalFlip(p=0.5),
+        v2.RandomRotation(
+            degrees=45, 
+            interpolation=torchvision.transforms.InterpolationMode.BILINEAR)
+    ])
     
-    #train_ds = datasets.CIFAR10(root="./data", 
-    #                            train=True,
-    #                            transform=data_transform,
-    #                            download=True)
+    #train_ds = DogCatDataset(root="./data/PetImages", 
+    #                             train=True, 
+    #                             transform=data_transform)
+    
+    train_ds = datasets.CIFAR10(root="./data", 
+                                train=True,
+                                transform=data_aug_transform,
+                                download=True)
+    
+    train_noaug_ds = datasets.CIFAR10(root="./data", 
+                                train=True,
+                                transform=base_data_transform,
+                                download=True)
     
     test_ds = datasets.CIFAR10(root="./data", 
                                 train=False,
-                                transform=data_transform,
+                                transform=base_data_transform,
                                 download=True)    
 
     batch_size = 64
     
     train_dataloader = DataLoader(train_ds, batch_size=batch_size,
                                   shuffle=True)
+    train_noaug_dataloader = DataLoader(train_noaug_ds, batch_size=batch_size)
     test_dataloader = DataLoader(test_ds, batch_size=batch_size)
     
     #for (index, batch) in enumerate(train_dataloader):
@@ -104,7 +154,7 @@ def main():
         
         image = np.transpose(image, [1,2,0])
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        #image = cv2.resize(image, dsize=None, fx=5.0, fy=5.0)
+        image = cv2.resize(image, dsize=None, fx=5.0, fy=5.0)
         
         cv2.imshow("IMAGE", image)
         cv2.waitKey(-1)
