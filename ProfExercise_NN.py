@@ -75,6 +75,35 @@ class SimpleNetwork(nn.Module):
         logits = self.layer_stack(x)
         return logits
     
+class ConvNetwork(nn.Module):
+    def __init__(self, input_channels):
+        super().__init__()
+        self.feature_stack = nn.Sequential(
+            nn.Conv2d(input_channels, 32, 3),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, 3),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            
+            nn.Conv2d(32, 64, 3),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3),
+            nn.ReLU(),
+            nn.MaxPool2d(2),           
+        ) 
+        self.flatten = nn.Flatten()
+        self.layer_stack = nn.Sequential(
+            nn.Linear(1024, 32),
+            nn.ReLU(),
+            nn.Linear(32, 10)
+        )              
+    
+    def forward(self, x):
+        x = self.feature_stack(x)
+        x = self.flatten(x)
+        logits = self.layer_stack(x)
+        return logits
+
 
 def count_parameters(model):
     table = PrettyTable(["Modules", "Parameters"])
@@ -166,10 +195,12 @@ def main():
                                 transform=base_data_transform,
                                 download=True)    
     
-    input_channels = np.prod(next(iter(train_ds))[0].numpy().shape)
+    #input_channels = np.prod(next(iter(train_ds))[0].numpy().shape)
+    input_channels = next(iter(train_ds))[0].numpy().shape[0]
     print("Input channels:", input_channels)
     
-    model = SimpleNetwork(input_channels).to(device)
+    #model = SimpleNetwork(input_channels).to(device)
+    model = ConvNetwork(input_channels).to(device)
     print(model)
     count_parameters(model)
 
