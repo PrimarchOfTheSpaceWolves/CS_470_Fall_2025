@@ -61,11 +61,11 @@ class DogCatDataset(Dataset):
         return (image, label)        
     
 class SimpleNetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, input_channels):
         super().__init__()
         self.flatten = nn.Flatten()
         self.layer_stack = nn.Sequential(
-            nn.Linear(3072, 32),
+            nn.Linear(input_channels, 32),
             nn.ReLU(),
             nn.Linear(32, 10)
         )              
@@ -89,14 +89,46 @@ def count_parameters(model):
     print(f"Total Trainable Params: {total_params}")
     return total_params
 
-
+def train(dataloader, model, loss_fn, optimizer, device):
+    model.train()
+    size = len(dataloader.dataset)
+    
+    for batch, (X,y) in enumerate(dataloader):
+        X = X.to(device)
+        y = y.to(device)
+        pred = model(X)
+        loss = loss_fn(pred, y)
+        
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        
+        if batch % 100 == 0:
+            sample_cnt = (batch+1)*len(X)
+            loss_val = loss.item()
+            print("(", sample_cnt, "/", size, ") Loss", loss_val)      
+     
+def test(dataloader, model, loss_fn, data_name, device):
+    model.eval()
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    test_loss = 0
+    test_acc = 0
+    with torch.no_grad():
+        for batch, (X,y) in enumerate(dataloader):
+            X = X.to(device)
+            y = y.to(device)
+            pred = model(X)
+            test_loss += loss_fn(pred, y).item()
+            test_acc += (pred.argmax(1) == y).type(torch.float).sum().item()
+    test_loss /= num_batches
+    test_acc /= size
+    print(data_name, ": Loss =", test_loss, ", Acc =", test_acc)
+    return test_loss        
+   
 def main():
     
-    device = "cuda"
-    
-    model = SimpleNetwork().to(device)
-    print(model)
-    count_parameters(model)
+    device = "cuda"       
     
     base_data_transform = v2.Compose([
         v2.ToImage(),
@@ -107,29 +139,39 @@ def main():
     data_aug_transform = v2.Compose([
         base_data_transform,
         v2.RandomHorizontalFlip(p=0.5),
-        v2.RandomRotation(
-            degrees=45, 
-            interpolation=torchvision.transforms.InterpolationMode.BILINEAR)
+        #v2.RandomRotation(
+        #    degrees=45, 
+        #    interpolation=torchvision.transforms.InterpolationMode.BILINEAR)
     ])
     
     #train_ds = DogCatDataset(root="./data/PetImages", 
     #                             train=True, 
     #                             transform=data_transform)
     
-    train_ds = datasets.CIFAR10(root="./data", 
+    #dataset_name = datasets.CIFAR10
+    dataset_name = datasets.MNIST
+    
+    train_ds = dataset_name(root="./data", 
                                 train=True,
                                 transform=data_aug_transform,
                                 download=True)
     
-    train_noaug_ds = datasets.CIFAR10(root="./data", 
+    train_noaug_ds = dataset_name(root="./data", 
                                 train=True,
                                 transform=base_data_transform,
                                 download=True)
     
-    test_ds = datasets.CIFAR10(root="./data", 
+    test_ds = dataset_name(root="./data", 
                                 train=False,
                                 transform=base_data_transform,
                                 download=True)    
+    
+    input_channels = np.prod(next(iter(train_ds))[0].numpy().shape)
+    print("Input channels:", input_channels)
+    
+    model = SimpleNetwork(input_channels).to(device)
+    print(model)
+    count_parameters(model)
 
     batch_size = 64
     
@@ -139,6 +181,7 @@ def main():
     test_dataloader = DataLoader(test_ds, batch_size=batch_size)
     
     #for (index, batch) in enumerate(train_dataloader):
+    '''
     data_iter = iter(train_dataloader)
     for _ in range(5):
         batch = next(data_iter)
@@ -159,12 +202,21 @@ def main():
         cv2.imshow("IMAGE", image)
         cv2.waitKey(-1)
         cv2.destroyAllWindows()        
+    '''
             
-    epoch_cnt = 5
+    epoch_cnt = 3
     
-    #for epoch in range(epoch_cnt):    
-    #    for batch in train_dataloader:
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    
+    for epoch in range(epoch_cnt):    
+        print("** EPOCH", epoch)
+        train(train_dataloader, model, loss_fn, optimizer, device)
         
+        test(train_noaug_dataloader, model, loss_fn, "TRAIN", device)
+        test(test_dataloader, model, loss_fn, "TEST", device)
+        
+    torch.save(model.state_dict(), "model.pth")                  
     
 if __name__ == "__main__":
     main()
